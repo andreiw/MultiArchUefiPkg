@@ -3,6 +3,11 @@
 This repo implements a UEFI driver that allows non-native UEFI boot
 service drivers and applications to be executed in 64-bit UEFI environments.
 
+> [!NOTE]
+> Relation to https://github.com/intel/MultiArchUefiPkg - this is a direct continuation
+> of the work I've done at Intel before I left. Most likely, the Intel repo is dead,
+> as I was the owner and the only remaining contributor to the project.
+
 The primary motivation is bringing together the IHV device and
 standardized AARCH64 and RISCV64 ecosystems. This driver allows plugging
 off the shelf storage, network and video cards into non-x86 machines
@@ -14,7 +19,7 @@ UEFI binaries. On RISCV64, EmulatorDxe can be built with X64 and AARCH64
 UEFI binary support.
 
 It's derived from [X86EmulatorPkg](https://github.com/ardbiesheuvel/X86EmulatorPkg),
-yet is otherwise a reimplementation using a [UEFI-enabled version](https://github.com/intel/unicorn-for-efi)
+yet is otherwise a reimplementation using a [UEFI-enabled version](https://github.com/andreiw/unicorn-for-efi)
 of the [Unicorn Engine](https://www.unicorn-engine.org/) - a flexible
 CPU emulator framework.
 
@@ -76,8 +81,8 @@ To quickly build a RISC-V version:
 
         $ git clone https://github.com/tianocore/edk2.git
         $ cd edk2
-        $ git submodule add https://github.com/intel/unicorn-for-efi.git unicorn
-        $ git submodule add https://github.com/intel/MultiArchUefiPkg.git
+        $ git submodule add https://github.com/andreiw/unicorn-for-efi.git unicorn
+        $ git submodule add https://github.com/andreiw/MultiArchUefiPkg.git
         $ git submodule update --init
         $ export GCC_RISCV64_PREFIX=... (if you are on a non-RISCV64 system)
         $ build -a RISCV64 -t GCC -p MultiArchUefiPkg/Emulator.dsc -b RELEASE
@@ -104,15 +109,15 @@ MultiArchUefiPkg is approved for release under GPLv2 and LGPLv2.1+ for the respe
 
 ## Security Policy
 
-Intel is committed to rapidly addressing security vulnerabilities affecting our customers and providing clear guidance on the solution, impact, severity and mitigation.
+I am committed to addressing security vulnerabilities with a reasonable response time for an open-source/hobby project and providing clear guidance on the solution, impact, severity and mitigation.
 
 ## Reporting A Vulnerability
-Please report any security vulnerabilities in this project utilizing the guidelines [here](https://www.intel.com/content/www/us/en/security-center/vulnerability-handling-guidelines.html).
+If you have discovered potential security vulnerability, please validate with the latest commit in the repo. If the issue reproduces - raise an issue. It is important to include the following details:
+- Detailed description of the vulnerability, with a repro if possible.
+- Information on known exploits.
 
 ## Contribute
 
-This is a [RISE Project](https://riseproject.dev) under the Firmware WG. See the [project wiki page](https://wiki.riseproject.dev/display/HOME/EDK2_00_01+-+MultiArchUefiPkg).
-
 Contributions are welcome. Please raise issues and pull requests.
 
-Please see the [policy on contributions](CONTRIBUTING.md) and our [Code of Conduct](CODE_OF_CONDUCT.md).
+Please see the [policy on contributions](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md).
