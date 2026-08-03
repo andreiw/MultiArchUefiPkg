@@ -16,7 +16,7 @@
   PLATFORM_VERSION               = 0.98
   DSC_SPECIFICATION              = 0x00010005
   OUTPUT_DIRECTORY               = Build/MultiArchUefiPkg
-  SUPPORTED_ARCHITECTURES        = AARCH64|RISCV64|LOONGARCH64
+  SUPPORTED_ARCHITECTURES        = AARCH64|RISCV64|LOONGARCH64|E2K
   BUILD_TARGETS                  = DEBUG|RELEASE|NOOPT
   SKUID_IDENTIFIER               = DEFAULT
 
@@ -91,6 +91,13 @@
   # Seems to work well even when building on small machines.
   #
   UC_LTO_JOBS                    = auto
+  #
+  # E2K only: build the sync-exception handler for the hosted
+  # (LinuxLoader) environment instead of native (PnsLoader). The two
+  # differ only in the trap-context layout - see Drivers/Emulator/E2K.
+  # Override with: build -D MAU_E2K_HOSTED=YES
+  #
+  MAU_E2K_HOSTED                 = NO
 
 !include MultiArchUefiPkg.dsc.inc
 
@@ -133,6 +140,17 @@
   gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel|0x8000004F
 !endif
 
+[PcdsFixedAtBuild.E2K]
+  #
+  # DEBUG builds on e2k also get DEBUG_VERBOSE, which is what prints the
+  # emulated <-> native call trace. That trace is the main diagnostic while
+  # the port is being brought up, and this BaseTools has no --pcd option to
+  # raise the level from the command line.
+  #
+!if $(TARGET) != RELEASE
+  gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel|0x8040004F
+!endif
+
 [LibraryClasses.common]
   #
   # Entry point
@@ -157,7 +175,14 @@
   # Since software stack checking may be heuristically enabled by the compiler
   # include StackCheckLib unconditionally.
   #
+  # Note: the e2k EDK2 tree predates StackCheckLibNull, it still has
+  # the old BaseStackCheckLib.
+  #
+!if $(ARCH) == E2K
+  NULL|MdePkg/Library/BaseStackCheckLib/BaseStackCheckLib.inf
+!else
   NULL|MdePkg/Library/StackCheckLibNull/StackCheckLibNull.inf
+!endif
   #
   # Misc.
   #
@@ -215,7 +240,20 @@
   TimerLib|UefiCpuPkg/Library/CpuTimerLib/BaseCpuTimerLib.inf
   CacheMaintenanceLib|MdePkg/Library/BaseCacheMaintenanceLib/BaseCacheMaintenanceLib.inf
 
+[LibraryClasses.E2K]
+  SynchronizationLib|MdePkg/Library/BaseSynchronizationLib/BaseSynchronizationLib.inf
+  CpuLib|MdePkg/Library/BaseCpuLib/BaseCpuLib.inf
+  TimerLib|E2kPkg/Library/BaseTimerLibIsaAb/TimerLib.inf
+  CacheMaintenanceLib|E2kPkg/Library/BaseCacheMaintenanceLibIsaAb/BaseCacheMaintenanceLibIsaAb.inf
+  #
+  # __ashlti3/__lshrti3 (__int128 shifts) used by qemu's int128 code.
+  #
+  NULL|E2kPkg/Library/CompilerIntrinsicsLib/CompilerIntrinsicsLib.inf
+
 [BuildOptions]
 !if $(ARCH) == RISCV64
   *_*_*_CC_FLAGS                       = -Os
+!endif
+!if $(MAU_E2K_HOSTED) == YES
+  *_*_E2K_CC_FLAGS                     = -DMAU_E2K_HOSTED
 !endif
