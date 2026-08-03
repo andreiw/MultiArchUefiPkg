@@ -25,3 +25,6 @@
 
 [Binaries.RISCV64]
   PE32|Build/MultiArchUefiPkg/DEBUG_GCC/RISCV64/EmulatorDxe.efi
+
+[Binaries.E2K]
+  PE32|Build/MultiArchUefiPkg/DEBUG_GCC/E2K/EmulatorDxe.efi

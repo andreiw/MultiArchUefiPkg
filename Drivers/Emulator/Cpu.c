@@ -220,6 +220,55 @@ CpuNullWriteCb (
   DEBUG_CODE_END ();
 }
 
+/**
+  Report an access to unmapped memory by emulated code.
+
+  Returning FALSE means "not handled", so emulation still terminates
+  with UC_ERR_*_UNMAPPED - this only makes the failure describe itself.
+**/
+STATIC
+BOOLEAN
+CpuMemInvalidCb (
+  IN  uc_engine    *UE,
+  IN  uc_mem_type  Type,
+  IN  UINT64       Address,
+  IN  INT32        Size,
+  IN  INT64        Value,
+  IN  VOID         *UserData
+  )
+{
+  CpuContext   *Cpu = UserData;
+  CONST CHAR8  *What;
+
+  switch (Type) {
+    case UC_MEM_READ_UNMAPPED:
+      What = "read";
+      break;
+    case UC_MEM_WRITE_UNMAPPED:
+      What = "write";
+      break;
+    case UC_MEM_FETCH_UNMAPPED:
+      What = "fetch";
+      break;
+    default:
+      What = "access";
+      break;
+  }
+
+  DEBUG ((
+    DEBUG_ERROR,
+    "%a: unmapped %a of %d bytes at 0x%lx (value 0x%lx) from PC 0x%lx\n",
+    Cpu->Name,
+    What,
+    Size,
+    Address,
+    (UINT64)Value,
+    REG_READ (Cpu, Cpu->ProgramCounterReg)
+    ));
+
+  return FALSE;
+}
+
 VOID
 CpuCleanupEx (
   IN  CpuContext  *Cpu
@@ -689,6 +738,7 @@ CpuInitEx (
   uc_hook  TimeoutHook;
  #endif /* MAU_EMU_TIMEOUT_NONE */
   uc_hook  IsNativeHook;
+  uc_hook  MemInvalidHook;
   size_t   UnicornCodeGenSize;
   uc_mode  UcMode;
 
@@ -823,6 +873,32 @@ CpuInitEx (
             );
   if (UcErr != UC_ERR_OK) {
     DEBUG ((DEBUG_ERROR, "IsNative hook failed: %a\n", uc_strerror (UcErr)));
+    return EFI_UNSUPPORTED;
+  }
+
+  /*
+   * All of memory beyond the zero page is mapped R/W below, so an access
+   * to unmapped memory means emulated code computed a bogus address. The
+   * hook doesn't handle the fault (it returns FALSE, so emulation still
+   * stops), it just says *where* it happened - without it all you get is
+   * a bare UC_ERR_READ_UNMAPPED.
+   *
+   * Data accesses only: instruction fetch failures are how native code
+   * execution is detected (see the UC_HOOK_TB_FIND_FAILURE hook above),
+   * so leave that path well alone.
+   */
+  UcErr = uc_hook_add (
+            Cpu->UE,
+            &MemInvalidHook,
+            UC_HOOK_MEM_READ_UNMAPPED |
+            UC_HOOK_MEM_WRITE_UNMAPPED,
+            CpuMemInvalidCb,
+            Cpu,
+            1,
+            0
+            );
+  if (UcErr != UC_ERR_OK) {
+    DEBUG ((DEBUG_ERROR, "Invalid memory hook failed: %a\n", uc_strerror (UcErr)));
     return EFI_UNSUPPORTED;
   }
 

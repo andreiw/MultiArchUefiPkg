@@ -32,6 +32,10 @@ typedef union {
     UINT64,
     UINT64
     );
+  UINT64 (*NativeFnVa)(
+    UINT64,
+    ...
+    );
   UINT64 (*WrapperFn)(
     UINT64  OriginalProgramCounter,
     UINT64  ReturnAddress,
@@ -39,6 +43,30 @@ typedef union {
     );
   UINT64    ProgramCounter;
 } Fn;
+
+/*
+ * Which flavor of the above is used to perform the emulated -> native call.
+ *
+ * On e2k the variadic calling convention is a strict superset of the fixed
+ * one: arguments 0-7 are passed in the register window *and* every argument
+ * is mirrored into the memory parameter area at [callee-SP + 0x00 ...],
+ * which is exactly where a callee's va_start()/va_arg() picks them up from
+ * (arguments 8+ live at [callee-SP + 0x40 ...] under both conventions).
+ *
+ * A variadic callee - e.g. EDK2's gBS->InstallMultipleProtocolInterfaces -
+ * therefore reads pure garbage when it is invoked through a fixed-argument
+ * prototype, because the mirror area is never written by the caller. Since
+ * we cannot know whether the native target is variadic, always call through
+ * a variadic prototype on e2k: that satisfies both kinds of callee.
+ *
+ * Other hosts pass variadic and fixed arguments identically, so they keep
+ * using the plain prototype.
+ */
+#ifdef MDE_CPU_E2K
+  #define NATIVE_CALL_FN  NativeFnVa
+#else
+  #define NATIVE_CALL_FN  NativeFn
+#endif
 
 EFI_STATUS
 EFIAPI
@@ -172,7 +200,7 @@ NativeThunkAArch64 (
     };
     X0 = Func.WrapperFn (ProgramCounter, Lr, WrapperArgs);
   } else {
-    X0 = Func.NativeFn (
+    X0 = Func.NATIVE_CALL_FN (
                 X0,
                 X1,
                 X2,
@@ -269,7 +297,7 @@ NativeThunkX64 (
     StackArgs[4] = R9;
     Rax          = Func.WrapperFn (ProgramCounter, StackArgs[0], StackArgs + 1);
   } else {
-    Rax = Func.NativeFn (
+    Rax = Func.NATIVE_CALL_FN (
                  Rcx,
                  Rdx,
                  R8,

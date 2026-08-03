@@ -47,6 +47,9 @@
   LOONGARCH64/Emulator.c
   LOONGARCH64/EmulatorThunk.S
 
+[Sources.E2K]
+  E2K/Emulator.c
+
 [Packages]
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
@@ -55,6 +58,9 @@
 
 [Packages.AARCH64]
   ArmPkg/ArmPkg.dec
+
+[Packages.E2K]
+  E2kPkg/E2kPkg.dec
 
 [LibraryClasses.RISCV64, LibraryClasses.LOONGARCH64]
   CpuExceptionHandlerLib
@@ -88,3 +94,6 @@
 
 [BuildOptions.RISCV64]
   *_*_*_CC_FLAGS       = -DMAU_TRY_WITHOUT_MMU -DMAU_WRAPPED_ENTRY_POINTS
+
+[BuildOptions.E2K]
+  *_*_*_CC_FLAGS       = -DMAU_WRAPPED_ENTRY_POINTS
