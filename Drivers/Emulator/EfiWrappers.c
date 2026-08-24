@@ -188,6 +188,9 @@ EfiWrapperCreateEventCommon (
 
   if (EFI_ERROR (Status)) {
     *Event = NULL;
+    CriticalBegin ();
+    RemoveEntryList (&Record->Link);
+    CriticalEnd ();
     FreePool (Record);
     return Status;
   }
